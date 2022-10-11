@@ -48,6 +48,8 @@ class CBOW(nn.Module):
         return o
     
     def loss(self, x, y, training=None):
+        yd = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        y = y.type(torch.LongTensor).to(yd)
         embedded = self(x,training)
         pred= self.hidden_out(embedded)
         return cross_entropy(pred,y)
@@ -57,7 +59,7 @@ class CBOW(nn.Module):
         loss = self.loss(x,y,True)
         loss.backward()
         self.opt.step()
-        return loss.detach().numpy()
+        return loss.detach().cpu().numpy()
 
 def train(model,data):
     if torch.cuda.is_available():
@@ -75,8 +77,8 @@ def train(model,data):
             print(f"step: {t}  |  loss: {loss}")
 
 if __name__ == "__main__":
-    d = process_w2v_data(corpus,skip_window=2, method="cbow")
-    m = CBOW(d.num_word, 2)
-    train(m,d)
-
-    show_w2v_word_embedding(m,d,"./visual/results/cbow.png")
+    dataset = process_w2v_data(corpus,skip_window=2, method="cbow")
+    # d.num_word ---> 一共幾個單字
+    model = CBOW(dataset.num_word, 2)
+    train(model, dataset)
+    show_w2v_word_embedding(model.cpu(), dataset, "./visual/results/cbow.png")
