@@ -31,54 +31,52 @@ corpus = [
 ]
 
 class CBOW(nn.Module):
-    def __init__(self,v_dim,emb_dim):
+    def __init__(self, v_dim, emb_dim):
         super().__init__()
         self.v_dim = v_dim
-        self.embeddings = nn.Embedding(v_dim,emb_dim)
-        self.embeddings.weight.data.normal_(0,0.1)
+        self.embeddings = nn.Embedding(v_dim, emb_dim)  # 把文字壓成emb_dim維向量
+        self.embeddings.weight.data.normal_(0, 0.1)
 
         # self.opt = torch.optim.Adam(0.01)
-        self.hidden_out = nn.Linear(emb_dim,v_dim)
-        self.opt = torch.optim.SGD(self.parameters(),momentum=0.9,lr=0.01)
+        self.hidden_out = nn.Linear(emb_dim, v_dim)  # emb_dim: 詞向量的維度, v_dim: 幾個單字
+        self.opt = torch.optim.SGD(self.parameters(), momentum=0.9, lr=0.01)
     
-    def forward(self,x,training=None, mask=None):
-        # x.shape = [n,skip_window*2]
-        o = self.embeddings(x)  # [n, skip_window*2, emb_dim]
-        o = torch.mean(o,dim=1) # [n, emb_dim]
+    def forward(self, x, training=None, mask=None):
+        # x.shape = [n , skip_window*2]
+        o = self.embeddings(x)  # [n, skip_window*2, emb_dim]  [batch_size, len(x), emb_dim]
+        o = torch.mean(o, dim=1) # [n, emb_dim]
         return o
     
     def loss(self, x, y, training=None):
-        yd = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        y = y.type(torch.LongTensor).to(yd)
-        embedded = self(x,training)
-        pred= self.hidden_out(embedded)
-        return cross_entropy(pred,y)
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        y = y.type(torch.LongTensor).to(device)
+        embedded = self(x, training)
+        pred = self.hidden_out(embedded)
+        return cross_entropy(pred, y)
     
-    def step(self,x,y):
+    def step(self, x, y):
         self.opt.zero_grad()
-        loss = self.loss(x,y,True)
+        loss = self.loss(x, y, True)
         loss.backward()
         self.opt.step()
         return loss.detach().cpu().numpy()
 
-def train(model,data):
+def train(model, data):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+    model.train()
     if torch.cuda.is_available():
         print("GPU train avaliable")
-        device =torch.device("cuda")
-        model = model.cuda()
-    else:
-        device = torch.device("cpu")
-        model = model.cpu()
     for t in range(2500):
-        bx,by = data.sample(16)
-        bx,by = torch.from_numpy(bx).to(device), torch.from_numpy(by).to(device)
-        loss = model.step(bx,by)
-        if t%200 == 0:
+        bx, by = data.sample(16)
+        bx, by = torch.from_numpy(bx).to(device), torch.from_numpy(by).to(device)
+        loss = model.step(bx, by)
+        if t % 200 == 0:
             print(f"step: {t}  |  loss: {loss}")
 
 if __name__ == "__main__":
     dataset = process_w2v_data(corpus,skip_window=2, method="cbow")
-    # d.num_word ---> 一共幾個單字
+    # d.num_word ---> 一共幾個單字, 把文字壓成2維向量
     model = CBOW(dataset.num_word, 2)
     train(model, dataset)
     show_w2v_word_embedding(model.cpu(), dataset, "./visual/results/cbow.png")
