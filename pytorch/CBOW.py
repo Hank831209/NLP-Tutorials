@@ -43,8 +43,11 @@ class CBOW(nn.Module):
     
     def forward(self, x, training=None, mask=None):
         # x.shape = [n , skip_window*2]
-        o = self.embeddings(x)  # [n, skip_window*2, emb_dim]  [batch_size, len(x), emb_dim]
-        o = torch.mean(o, dim=1) # [n, emb_dim]
+        # 一個batch有n個句子，一個輸入有skip_window*2個單字，把每個單字都壓縮成emb_dim個維度的向量，即: [16, 4] ---> [16, 4, 2]
+        # 一個batch有16個句子，一個輸入有4個單字，把每個單字都壓縮成2個維度的向量，即: [16, 4] ---> [16, 4, 2]
+        o = self.embeddings(x)  # [batch_size, skip_window*2, emb_dim]  [batch_size, len(x), emb_dim]
+        # 把每(4)個單字的embeddings(2維向量)加起來取平均([16, 4, 2] ---> [16, 2])之後再連接線性層再取softmax
+        o = torch.mean(o, dim=1) # [batch_size, emb_dim]
         return o
     
     def loss(self, x, y, training=None):

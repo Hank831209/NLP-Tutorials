@@ -33,54 +33,57 @@ corpus = [
 
 class SkipGram(nn.Module):
 
-    def __init__(self,v_dim,emb_dim):
+    def __init__(self, v_dim, emb_dim):
         super().__init__()
         self.v_dim = v_dim
-        self.embeddings = nn.Embedding(v_dim,emb_dim)
-        self.embeddings.weight.data.normal_(0,0.1)
-        self.hidden_out = nn.Linear(emb_dim,v_dim)
+        self.embeddings = nn.Embedding(v_dim, emb_dim)
+        self.embeddings.weight.data.normal_(0, 0.1)
+        self.hidden_out = nn.Linear(emb_dim, v_dim)
 
-        self.opt = torch.optim.Adam(self.parameters(),lr=0.01)
+        self.opt = torch.optim.Adam(self.parameters(), lr=0.01)
     
-    def forward(self,x,training=None, mask=None):
+    def forward(self, x, training=None, mask=None):
         # x.shape = [n,]
+        # print('x.shape: ', x.shape)
         o = self.embeddings(x)  # [n, emb_dim]
+        # print('o.shape: ', o.shape)
         return o
     
-    def loss(self,x,y,training=None):
-        embedded = self(x,training)
-        pred= self.hidden_out(embedded)
-        return cross_entropy(pred,y)
+    def loss(self, x, y, training=None):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        y = y.type(torch.LongTensor).to(device)
+        embedded = self(x, training)
+        pred = self.hidden_out(embedded)
+        # print(pred.shape)
+        return cross_entropy(pred, y)
     
-    def step(self,x,y):
+    def step(self, x, y):
         self.opt.zero_grad()
-        loss = self.loss(x,y,True)
+        loss = self.loss(x, y, True)
         loss.backward()
         self.opt.step()
-        return loss.detach().numpy()
+        return loss.detach().cpu().numpy()
 
 def train(model,data):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+    model.train()
     if torch.cuda.is_available():
         print("GPU train avaliable")
-        device =torch.device("cuda")
-        model = model.cuda()
-    else:
-        device = torch.device("cpu")
-        model = model.cpu()
     for t in range(2500):
         bx,by = data.sample(8)
         bx,by = torch.from_numpy(bx).to(device), torch.from_numpy(by).to(device)
         loss = model.step(bx,by)
-        if t%200 == 0:
+        if t % 200 == 0:
             print(f"step: {t}  |  loss: {loss}")
 
 
 if __name__ == "__main__":
-    d = process_w2v_data(corpus,skip_window=2, method="skip_gram")
-    m = SkipGram(d.num_word, 2)
-    train(m,d)
+    dataset = process_w2v_data(corpus, skip_window=2, method="skip_gram")
+    model = SkipGram(dataset.num_word, 2)
+    train(model, dataset)
 
     #plotting
-    show_w2v_word_embedding(m,d,"./visual/results/skipgram.png")
+    show_w2v_word_embedding(model.cpu(), dataset, "./visual/results/skipgram.png")
 
 
