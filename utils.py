@@ -204,15 +204,15 @@ class Dataset:
 
 
 def process_w2v_data(corpus, skip_window=2, method="skip_gram"):
-    all_words = [sentence.split(" ") for sentence in corpus]
-    all_words = np.array(list(itertools.chain(*all_words)))
+    all_words = [sentence.split(" ") for sentence in corpus]  # list
+    all_words = np.array(list(itertools.chain(*all_words)))  # list中的每個list同時帶入
     # vocab sort by decreasing frequency for the negative sampling below (nce_loss).
     vocab, v_count = np.unique(all_words, return_counts=True)
-    vocab = vocab[np.argsort(v_count)[::-1]]
+    vocab = vocab[np.argsort(v_count)[::-1]]  # 出現次數大到小排列 
 
     print("all vocabularies sorted from more frequent to less frequent:\n", vocab)
-    v2i = {v: i for i, v in enumerate(vocab)}
-    i2v = {i: v for v, i in v2i.items()}
+    v2i = {v: i for i, v in enumerate(vocab)}  # vector to index
+    i2v = {i: v for v, i in v2i.items()}  # index to vector
 
     # pair data
     pairs = []
@@ -240,7 +240,7 @@ def process_w2v_data(corpus, skip_window=2, method="skip_gram"):
     if method.lower() == "skip_gram":
         x, y = pairs[:, 0], pairs[:, 1]
     elif method.lower() == "cbow":
-        x, y = pairs[:, :-1], pairs[:, -1]
+        x, y = pairs[:, :-1], pairs[:, -1]  # feature, target
     else:
         raise ValueError
     return Dataset(x, y, v2i, i2v)

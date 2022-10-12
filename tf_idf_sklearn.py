@@ -23,17 +23,19 @@ docs = [
 
 vectorizer = TfidfVectorizer()
 tf_idf = vectorizer.fit_transform(docs)
-print("idf: ", [(n, idf) for idf, n in zip(vectorizer.idf_, vectorizer.get_feature_names())])
+print("idf: ", [(n, idf) for n, idf in zip(vectorizer.get_feature_names_out(), vectorizer.idf_)])
+print('---'*30)
 print("v2i: ", vectorizer.vocabulary_)
 
 
 q = "I get a coffee cup"
 qtf_idf = vectorizer.transform([q])
 res = cosine_similarity(tf_idf, qtf_idf)
-res = res.ravel().argsort()[-3:]
+res = res.ravel().argsort()[-3:]  # 小到大的index，倒數三個
 print("\ntop 3 docs for '{}':\n{}".format(q, [docs[i] for i in res[::-1]]))
 
 
-i2v = {i: v for v, i in vectorizer.vocabulary_.items()}
-dense_tfidf = tf_idf.todense()
+i2v = {i: v for v, i in vectorizer.vocabulary_.items()}  # 詞彙
+dense_tfidf = tf_idf.todense()  # returns a matrix
 show_tfidf(dense_tfidf, [i2v[i] for i in range(dense_tfidf.shape[1])], "tfidf_sklearn_matrix")
+
